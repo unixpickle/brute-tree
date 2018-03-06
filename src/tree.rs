@@ -32,37 +32,29 @@ impl Tree {
         }
     }
 
-    /// Increment the tree under a well-defined ordering.
-    /// If the increment causes wrap-around, the second
-    /// return value is true.
-    pub fn next_tree(&self, feature_max: usize, threshold_max: u8) -> (Tree, bool) {
+    /// Advance forward by n trees.
+    ///
+    /// The "remainder" is yielded if wraparound occurs.
+    /// In this case, it represents the number of times
+    /// the add wrapped around.
+    pub fn add(&self, n: usize, feature_max: usize, threshold_max: u8) -> (Tree, usize) {
         if let &Some(ref branch) = &self.branch {
-            let (new_left, wrap_left) = branch.left.next_tree(feature_max, threshold_max);
-            let (new_right, wrap_right) = if wrap_left {
-                branch.right.next_tree(feature_max, threshold_max)
-            } else {
-                (branch.right.clone(), false)
-            };
+            let (new_left, left_carry) = branch.left.add(n, feature_max, threshold_max);
+            let (new_right, right_carry) = branch.right.add(left_carry, feature_max,
+                threshold_max);
             let stump = Tree{feature: self.feature, threshold: self.threshold, branch: None};
-            let (new_stump, wrap) = if wrap_right {
-                stump.next_tree(feature_max, threshold_max)
-            } else {
-                (stump, false)
-            };
+            let (new_stump, stump_carry) = stump.add(right_carry, feature_max, threshold_max);
             (Tree{
                 feature: new_stump.feature,
                 threshold: new_stump.threshold,
                 branch: Some(Box::new(Branch{left: new_left, right: new_right}))
-            }, wrap)
+            }, stump_carry)
         } else {
-            if self.threshold < threshold_max {
-                (Tree{feature: self.feature, threshold: self.threshold + 1, branch: None},
-                    false)
-            } else if self.feature < feature_max {
-                (Tree{feature: self.feature+1, threshold: 0, branch: None}, false)
-            } else {
-                (Tree{feature: 0, threshold: 0, branch: None}, true)
-            }
+            let (new_thresh, thresh_carry) = modular_add(self.threshold as usize, n,
+                threshold_max as usize);
+            let (new_feature, feature_carry) = modular_add(self.feature, thresh_carry,
+                feature_max);
+            (Tree{feature: new_feature, threshold: new_thresh as u8, branch: None}, feature_carry)
         }
     }
 
@@ -80,4 +72,8 @@ impl Tree {
             }).decision_path(path, sample);
         }
     }
+}
+
+fn modular_add(start: usize, add: usize, limit: usize) -> (usize, usize) {
+    ((start + add) % limit, (start + add) / limit)
 }
