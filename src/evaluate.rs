@@ -5,9 +5,16 @@ use std::collections::HashMap;
 
 use tree::Tree;
 
+/// A structure indicating the accuracy of a tree.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TreeEvaluation {
+    pub tree: Tree,
+    pub accuracy: f64
+}
+
 /// Get the maximum number of correct classifications for
 /// the given tree.
-pub fn evaluate<S, L>(t: Tree, samples: &[S], labels: &[L]) -> usize
+pub fn evaluate<S, L>(t: &Tree, samples: &[S], labels: &[L]) -> usize
     where S: Index<usize>, S::Output: PartialOrd<u8>, L: Copy + Hash + Eq
 {
     let mut mapping: HashMap<Vec<bool>, HashMap<L, usize>> = HashMap::new();

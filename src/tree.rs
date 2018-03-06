@@ -4,8 +4,8 @@ use rand::thread_rng;
 // TODO: figure out why no Distributions trait (must be an old version).
 use rand::distributions::{IndependentSample, Range};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 /// A decision tree that is stored on the heap.
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct Tree {
     feature: usize,
     threshold: u8,
