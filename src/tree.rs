@@ -80,5 +80,4 @@ impl Tree {
             }).decision_path(path, sample);
         }
     }
-
 }
