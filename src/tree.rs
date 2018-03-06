@@ -1,7 +1,7 @@
 use std::cmp::PartialOrd;
 use std::ops::Index;
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 /// A decision tree that is stored on the heap.
 pub struct Tree {
     feature: usize,
@@ -9,7 +9,7 @@ pub struct Tree {
     branch: Option<Box<Branch>>
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct Branch {
     left: Tree,
     right: Tree
