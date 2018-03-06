@@ -40,7 +40,7 @@ impl Tree {
     }
 
     /// Get the decision path for the feature map.
-    pub fn decision_path<T: Index<usize>>(&self, path: &mut Vec<bool>, sample: T)
+    pub fn decision_path<T: Index<usize>>(&self, path: &mut Vec<bool>, sample: &T)
         where T::Output: PartialOrd<u8>
     {
         let right = sample[self.feature] > self.threshold;
