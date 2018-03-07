@@ -7,15 +7,15 @@ use rand::distributions::{IndependentSample, Range};
 /// A decision tree that is stored on the heap.
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct Tree {
-    feature: usize,
-    threshold: u8,
-    branch: Option<Box<Branch>>
+    pub feature: usize,
+    pub threshold: u8,
+    pub branch: Option<Box<Branch>>
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct Branch {
-    left: Tree,
-    right: Tree
+    pub left: Tree,
+    pub right: Tree
 }
 
 impl Tree {
