@@ -5,7 +5,7 @@ use dataset::Dataset;
 // An Image is a 28x28 handwritten digit.
 // A value of 255 means "black", while 0 means "white".
 #[derive(Copy, Clone)]
-struct Image([u8; 784]);
+pub struct Image([u8; 784]);
 
 impl Index<usize> for Image {
     type Output = u8;
@@ -16,17 +16,25 @@ impl Index<usize> for Image {
 }
 
 /// A loaded copy of the MNIST dataset.
-struct MNIST {
-    train_data: [Image; 60000],
-    test_data: [Image; 10000],
+pub struct MNIST {
+    train_data: Vec<Image>,
+    test_data: Vec<Image>,
 
-    train_labels: [u8; 60000],
-    test_labels: [u8; 10000]
+    train_labels: Vec<u8>,
+    test_labels: Vec<u8>
 }
 
 impl Dataset for MNIST {
     type Sample = Image;
     type Label = u8;
+
+    fn feature_max() -> usize {
+        28 * 28 - 1
+    }
+
+    fn threshold_max() -> u8 {
+        254
+    }
 
     /// Load the dataset from a directory.
     /// The directory should contain the four files:
@@ -37,18 +45,18 @@ impl Dataset for MNIST {
     fn load(path: &str) -> Result<Self, String> {
         // TODO: load the data from files here.
         Ok(MNIST{
-            train_data: [Image{0: [0; 784]}; 60000],
-            test_data: [Image{0: [0; 784]}; 10000],
-            train_labels: [0; 60000],
-            test_labels: [0; 10000]
+            train_data: Vec::new(),
+            test_data: Vec::new(),
+            train_labels: Vec::new(),
+            test_labels: Vec::new()
         })
     }
 
     fn train_data<'a>(&'a self) -> (&[Self::Sample], &[Self::Label]) {
-        (&self.train_data, &self.train_labels)
+        (self.train_data.as_slice(), self.train_labels.as_slice())
     }
 
     fn test_data<'a>(&'a self) -> (&[Self::Sample], &[Self::Label]) {
-        (&self.test_data, &self.test_labels)
+        (self.test_data.as_slice(), self.test_labels.as_slice())
     }
 }

@@ -20,11 +20,12 @@ pub struct Branch {
 
 impl Tree {
     /// Construct a random tree of the given depth.
-    pub fn random(depth: u8, features: &Range<usize>, thresholds: &Range<u8>) -> Tree
+    pub fn random(depth: u8, feature_max: usize, threshold_max: u8) -> Tree
     {
         let mut rng = thread_rng();
-        let feature = features.ind_sample(&mut rng);
-        let threshold = thresholds.ind_sample(&mut rng);
+        let feature = Range::new(0usize, feature_max + 1).ind_sample(&mut rng);
+        let threshold = Range::new(0usize, (threshold_max as usize) + 1)
+            .ind_sample(&mut rng) as u8;
         if depth == 0 {
             Tree{feature: feature, threshold: threshold, branch: None}
         } else {
@@ -32,8 +33,8 @@ impl Tree {
                 feature: feature,
                 threshold: threshold,
                 branch: Some(Box::new(Branch{
-                    left: Tree::random(depth - 1, features, thresholds),
-                    right: Tree::random(depth - 1, features, thresholds)
+                    left: Tree::random(depth - 1, feature_max, threshold_max),
+                    right: Tree::random(depth - 1, feature_max, threshold_max)
                 })),
             }
         }

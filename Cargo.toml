@@ -11,6 +11,10 @@ path = "src/mod.rs"
 name = "brute-tree-server"
 path = "src/server/main.rs"
 
+[[bin]]
+name = "brute-tree-worker"
+path = "src/worker/main.rs"
+
 [dependencies]
 futures = "0.1"
 hyper = "0.11"
