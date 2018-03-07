@@ -1,8 +1,10 @@
 extern crate brute_tree;
+extern crate clap;
 extern crate hyper;
 extern crate serde_json;
 extern crate tokio_core;
 
+use clap::{Arg, App};
 use hyper::{Method, Request};
 use hyper::client::Client;
 use tokio_core::reactor::Core;
@@ -13,11 +15,38 @@ use brute_tree::dataset::Dataset;
 use brute_tree::dataset::mnist::MNIST;
 
 fn main() {
-    // TODO: parse command-line arguments here.
-    let dataset = MNIST::load("mnist_dir").expect("failed to load MNIST");
-    let server_url = "http://localhost:1337/tree";
-    let trial_count = 10000usize;
-    let depth = 5u8;
+    let matches = App::new("brute-tree-server")
+        .arg(Arg::with_name("mnist")
+            .short("m")
+            .long("mnist")
+            .value_name("DIR")
+            .help("Set the MNIST data directory")
+            .takes_value(true))
+            .arg(Arg::with_name("server")
+                .short("s")
+                .long("server")
+                .value_name("URL")
+                .help("Set the URL where results are POSTed")
+                .takes_value(true))
+            .arg(Arg::with_name("trials")
+                .short("t")
+                .long("trials")
+                .value_name("INT")
+                .help("Set the number of trials per POST")
+                .takes_value(true))
+            .arg(Arg::with_name("depth")
+                .short("d")
+                .long("depth")
+                .value_name("INT")
+                .help("Set the tree depth")
+                .takes_value(true))
+        .get_matches();
+
+    let server_url = matches.value_of("server").unwrap_or("http://localhost:1337/tree");
+    let mnist_dir = matches.value_of("mnist").unwrap_or("mnist_dir");
+    let trial_count = matches.value_of("trials").unwrap_or("10000").parse::<usize>().unwrap();
+    let dataset = MNIST::load(mnist_dir).expect("failed to load MNIST");
+    let depth = matches.value_of("depth").unwrap_or("5").parse::<u8>().unwrap();
 
     worker_loop(dataset, server_url, trial_count, depth).unwrap();
 }

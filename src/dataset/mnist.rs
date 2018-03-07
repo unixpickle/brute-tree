@@ -52,7 +52,6 @@ impl Dataset for MNIST {
         let child_path = |x| -> Result<String, io::Error>{
             let joined = Path::new(path).join(Path::new(x));
             if let Some(x) = joined.to_str() {
-                println!("doing {}", x);
                 Ok(String::from(x))
             } else {
                 Err(io::Error::new(io::ErrorKind::Other, "invalid path"))

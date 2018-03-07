@@ -1,4 +1,5 @@
 extern crate brute_tree;
+extern crate clap;
 extern crate futures;
 extern crate hyper;
 extern crate serde_json;
@@ -8,6 +9,7 @@ use std::net::{SocketAddr, SocketAddrV4, Ipv4Addr};
 use std::sync::mpsc::{Sender, channel};
 use std::thread;
 
+use clap::{Arg, App};
 use futures::future::Future;
 use futures::stream::Stream;
 use hyper::{Body, StatusCode};
@@ -50,19 +52,29 @@ impl Service for StatusService {
 }
 
 fn main() {
-    // TODO: parse argument here.
-    listen_on_port(1337u16);
+    let matches = App::new("brute-tree-server")
+        .arg(Arg::with_name("port")
+            .short("p")
+            .long("port")
+            .value_name("PORT")
+            .help("Set the port to listen on")
+            .takes_value(true))
+        .get_matches();
+    let port = matches.value_of("port").unwrap_or("1337").parse::<u16>().unwrap();
+    serve_on_port(port);
 }
 
-fn listen_on_port(port: u16) {
+fn serve_on_port(port: u16) {
     let (sender, receiver) = channel::<TreeEvaluation>();
     thread::spawn(move || {
         let mut best_acc = -1f64;
+        let mut count = 0usize;
         while let Ok(status) = receiver.recv() {
+            count += 1;
             if status.accuracy > best_acc {
                 best_acc = status.accuracy;
                 // TODO: dump JSON tree to a file.
-                println!("got new best accuracy: {}", status.accuracy);
+                println!("count {}: got new best accuracy: {}", count, status.accuracy);
             }
         }
     });
