@@ -40,18 +40,42 @@ impl Tree {
         }
     }
 
+    /// Get the number of possible decision paths.
+    ///
+    /// This only works for trees compatible with
+    /// Tree::decision_path().
+    pub fn count_decision_paths(&self) -> usize {
+        if let &Some(ref branch) = &self.branch {
+            let child_paths = branch.left.count_decision_paths();
+            assert_eq!(branch.right.count_decision_paths(), child_paths);
+            child_paths * 2
+        } else {
+            2
+        }
+    }
+
     /// Get the decision path for the feature map.
-    pub fn decision_path<T: Index<usize>>(&self, path: &mut Vec<bool>, sample: &T)
+    ///
+    /// This only produces valid outputs for certain trees.
+    /// Specifically, the tree must be balanced, and it
+    /// must have few enough decision paths to fit in usize.
+    pub fn decision_path<T: Index<usize>>(&self, sample: &T) -> usize
         where T::Output: PartialOrd<u8>
     {
         let right = sample[self.feature] > self.threshold;
-        path.push(right);
+        let bit = if right {
+            1usize
+        } else {
+            0usize
+        };
         if let &Some(ref branch) = &self.branch {
-            (if right {
+            ((if right {
                 &branch.right
             } else {
                 &branch.left
-            }).decision_path(path, sample);
+            }).decision_path(sample) << 1) | bit
+        } else {
+            bit
         }
     }
 }

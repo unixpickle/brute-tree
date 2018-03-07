@@ -26,13 +26,12 @@ pub struct MNIST {
     train_data: Vec<Image>,
     test_data: Vec<Image>,
 
-    train_labels: Vec<u8>,
-    test_labels: Vec<u8>
+    train_labels: Vec<usize>,
+    test_labels: Vec<usize>
 }
 
 impl Dataset for MNIST {
     type Sample = Image;
-    type Label = u8;
 
     fn feature_max() -> usize {
         IMAGE_SIZE - 1
@@ -65,16 +64,16 @@ impl Dataset for MNIST {
         })
     }
 
-    fn train_data<'a>(&'a self) -> (&[Self::Sample], &[Self::Label]) {
+    fn train_data<'a>(&'a self) -> (&[Self::Sample], &[usize]) {
         (self.train_data.as_slice(), self.train_labels.as_slice())
     }
 
-    fn test_data<'a>(&'a self) -> (&[Self::Sample], &[Self::Label]) {
+    fn test_data<'a>(&'a self) -> (&[Self::Sample], &[usize]) {
         (self.test_data.as_slice(), self.test_labels.as_slice())
     }
 }
 
-fn read_label_file(path: &str) -> Result<Vec<u8>, io::Error> {
+fn read_label_file(path: &str) -> Result<Vec<usize>, io::Error> {
     let mut f = File::open(path)?;
     let mut field32 = [0u8; 4];
     f.read_exact(&mut field32)?;
@@ -88,7 +87,7 @@ fn read_label_file(path: &str) -> Result<Vec<u8>, io::Error> {
     if result.len() != count {
         Err(io::Error::new(io::ErrorKind::InvalidData, "unexpected number of entries"))
     } else {
-        Ok(result)
+        Ok(result.into_iter().map(|x| x as usize).collect())
     }
 }
 

@@ -1,7 +1,5 @@
 use std::cmp::PartialOrd;
-use std::hash::Hash;
 use std::ops::Index;
-use std::collections::HashMap;
 
 use tree::Tree;
 
@@ -14,28 +12,24 @@ pub struct TreeEvaluation {
 
 /// Get the maximum number of correct classifications for
 /// the given tree.
-pub fn evaluate<S, L>(t: &Tree, samples: &[S], labels: &[L]) -> usize
-    where S: Index<usize>, S::Output: PartialOrd<u8>, L: Copy + Hash + Eq
+///
+/// The tree must be compatible with Tree::decision_path().
+pub fn evaluate<S>(t: &Tree, samples: &[S], labels: &[usize]) -> usize
+    where S: Index<usize>, S::Output: PartialOrd<u8>
 {
-    let mut mapping: HashMap<Vec<bool>, HashMap<L, usize>> = HashMap::new();
-    let mut path = Vec::new();
-    for (sample, label) in samples.iter().zip(labels.iter()) {
-        path.clear();
-        t.decision_path(&mut path, sample);
-        if !mapping.contains_key(&path) {
-            let mut new_counts = HashMap::<L, usize>::new();
-            new_counts.insert(*label, 1);
-            mapping.insert(path.clone(), new_counts);
-        } else {
-            let mut mapping_ref = &mut mapping;
-            let mut counts = mapping_ref.get_mut(&path).unwrap();
-            let new_count = if counts.contains_key(label) {
-                counts[label] + 1
-            } else {
-                1
-            };
-            counts.insert(*label, new_count);
+    let mut class_counts: Vec<Vec<usize>> = Vec::new();
+    let max_label = *labels.into_iter().max().unwrap_or(&0usize);
+    for _ in 0..t.count_decision_paths() {
+        let mut counts = Vec::new();
+        for _ in 0..(max_label + 1) {
+            counts.push(0usize);
         }
+        class_counts.push(counts);
     }
-    mapping.values().map(|x| x.values().max().unwrap()).sum()
+    for (sample, label) in samples.iter().zip(labels.iter()) {
+        let path = t.decision_path(sample);
+        let mut counts = &mut class_counts[path];
+        counts[*label] += 1;
+    }
+    class_counts.into_iter().map(|x| x.into_iter().max().unwrap_or(0usize)).sum()
 }
