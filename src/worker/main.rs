@@ -4,6 +4,8 @@ extern crate hyper;
 extern crate serde_json;
 extern crate tokio_core;
 
+use std::time::Instant;
+
 use clap::{Arg, App};
 use hyper::{Method, Request};
 use hyper::client::Client;
@@ -64,6 +66,7 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, trial_count: usize, dep
     loop {
         let mut best_correct = 0usize;
         let mut best_tree: Option<Tree> = None;
+        let start_time = Instant::now();
         for _ in 0..trial_count {
             let tree = Tree::random(depth, D::feature_max(), D::threshold_max());
             let num_correct = evaluate(&tree, samples, labels);
@@ -73,6 +76,9 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, trial_count: usize, dep
             }
         }
         if let Some(tree) = best_tree {
+            let time_per_tree = start_time.elapsed() / (trial_count as u32);
+            println!("averaged {}.{:03} sec/tree", time_per_tree.as_secs(),
+                time_per_tree.subsec_nanos() / 1000000);
             let result = TreeEvaluation{
                 tree: tree,
                 accuracy: (best_correct as f64) / (samples.len() as f64)
