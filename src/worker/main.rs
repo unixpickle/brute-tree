@@ -77,6 +77,7 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, trial_count: usize, dep
                 tree: tree,
                 accuracy: (best_correct as f64) / (samples.len() as f64)
             };
+            println!("sending result with accuracy {}", result.accuracy);
             send_result(&mut core, &client, server_url, result)?;
         }
     }
