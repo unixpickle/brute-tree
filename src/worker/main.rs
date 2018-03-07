@@ -49,11 +49,11 @@ fn main() {
             .value_name("INT")
             .help("Set the number of selected individuals")
             .takes_value(true))
-        .arg(Arg::with_name("generations")
-            .short("g")
-            .long("generations")
+        .arg(Arg::with_name("restart")
+            .short("r")
+            .long("restart")
             .value_name("INT")
-            .help("Set the number of generations per restart")
+            .help("Set the number of generations of no improvement before a restart")
             .takes_value(true))
         .arg(Arg::with_name("noise")
             .short("n")
@@ -69,14 +69,14 @@ fn main() {
     let depth = matches.value_of("depth").unwrap_or("5").parse::<u8>().unwrap();
     let population = matches.value_of("population").unwrap_or("100").parse::<usize>().unwrap();
     let elite = matches.value_of("elite").unwrap_or("10").parse::<usize>().unwrap();
-    let generations = matches.value_of("generations").unwrap_or("1000").parse::<usize>().unwrap();
+    let restart = matches.value_of("restart").unwrap_or("100").parse::<usize>().unwrap();
     let noise = matches.value_of("noise").unwrap_or("0.02").parse::<f64>().unwrap();
 
-    worker_loop(dataset, server_url, depth, population, elite, generations, noise).unwrap();
+    worker_loop(dataset, server_url, depth, population, elite, restart, noise).unwrap();
 }
 
 fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, population: usize,
-    elite: usize, generations: usize, noise: f64) -> Result<(), hyper::Error>
+    elite: usize, restart: usize, noise: f64) -> Result<(), hyper::Error>
     where <<D as Dataset>::Sample as std::ops::Index<usize>>::Output: std::cmp::PartialOrd<u8>
 {
     let mut core = Core::new().unwrap();
@@ -85,14 +85,15 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, population: 
 
     let (samples, labels) = dataset.train_data();
 
-    let mut best_ever = 0f64;
     loop {
         println!("doing random restart");
         let mut trees = Vec::new();
         for _ in 0..population {
             trees.push(Tree::random(depth, D::feature_max(), D::threshold_max()));
         }
-        for i in 0..generations {
+        let mut best_ever = 0f64;
+        let mut stagnate_iters = 0;
+        while stagnate_iters < restart {
             let start_time = Instant::now();
             let evals: Vec<TreeEvaluation> = (&trees).into_iter().map(|t| {
                 let num_correct = evaluate(t, samples, labels);
@@ -106,18 +107,16 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, population: 
             println!("best_acc={:.3} tree_time={}.{:04}", best_eval(&evals).accuracy,
                 time_per_tree.as_secs(), time_per_tree.subsec_nanos() / 100000);
 
-            {
-                let best = best_eval(&evals);
-                if best.accuracy > best_ever {
-                    best_ever = best.accuracy;
-                    send_result(&mut core, &client, server_url, best)?;
-                }
+            let best = best_eval(&evals);
+            if best.accuracy > best_ever {
+                stagnate_iters = 0;
+                best_ever = best.accuracy;
+                send_result(&mut core, &client, server_url, best)?;
+            } else {
+                stagnate_iters += 1;
             }
 
-            if i + 1 < generations {
-                trees = next_generation(&evals, elite, noise, D::feature_max(),
-                    D::threshold_max());
-            }
+            trees = next_generation(&evals, elite, noise, D::feature_max(), D::threshold_max());
         }
     }
 }
