@@ -5,6 +5,8 @@ extern crate hyper;
 extern crate serde_json;
 extern crate tokio_core;
 
+use std::fs::File;
+use std::io::Write;
 use std::net::{SocketAddr, SocketAddrV4, Ipv4Addr};
 use std::sync::mpsc::{Sender, channel};
 use std::thread;
@@ -59,12 +61,19 @@ fn main() {
             .value_name("PORT")
             .help("Set the port to listen on")
             .takes_value(true))
+        .arg(Arg::with_name("out")
+            .short("o")
+            .long("out")
+            .value_name("FILE")
+            .help("Set the path to store intermediate results")
+            .takes_value(true))
         .get_matches();
     let port = matches.value_of("port").unwrap_or("1337").parse::<u16>().unwrap();
-    serve_on_port(port);
+    let out_path = matches.value_of("out").unwrap_or("output.json");
+    serve_on_port(port, String::from(out_path));
 }
 
-fn serve_on_port(port: u16) {
+fn serve_on_port(port: u16, out_path: String) {
     let (sender, receiver) = channel::<TreeEvaluation>();
     thread::spawn(move || {
         let mut best_acc = -1f64;
@@ -73,8 +82,10 @@ fn serve_on_port(port: u16) {
             count += 1;
             if status.accuracy > best_acc {
                 best_acc = status.accuracy;
-                // TODO: dump JSON tree to a file.
                 println!("count {}: got new best accuracy: {}", count, status.accuracy);
+                let mut f = File::create(out_path.clone()).unwrap();
+                f.write_all(serde_json::to_string(&status).unwrap().as_bytes()).unwrap();
+                f.flush().unwrap();
             }
         }
     });
