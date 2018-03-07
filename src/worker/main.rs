@@ -67,10 +67,10 @@ fn main() {
     let mnist_dir = matches.value_of("mnist").unwrap_or("mnist_dir");
     let dataset = MNIST::load(mnist_dir).expect("failed to load MNIST");
     let depth = matches.value_of("depth").unwrap_or("5").parse::<u8>().unwrap();
-    let population = matches.value_of("population").unwrap_or("1000").parse::<usize>().unwrap();
+    let population = matches.value_of("population").unwrap_or("100").parse::<usize>().unwrap();
     let elite = matches.value_of("elite").unwrap_or("10").parse::<usize>().unwrap();
-    let generations = matches.value_of("generations").unwrap_or("50").parse::<usize>().unwrap();
-    let noise = matches.value_of("noise").unwrap_or("0.05").parse::<f64>().unwrap();
+    let generations = matches.value_of("generations").unwrap_or("1000").parse::<usize>().unwrap();
+    let noise = matches.value_of("noise").unwrap_or("0.02").parse::<f64>().unwrap();
 
     worker_loop(dataset, server_url, depth, population, elite, generations, noise).unwrap();
 }
@@ -85,6 +85,7 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, population: 
 
     let (samples, labels) = dataset.train_data();
 
+    let mut best_ever = 0f64;
     loop {
         println!("doing random restart");
         let mut trees = Vec::new();
@@ -105,7 +106,13 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, population: 
             println!("best_acc={:.3} tree_time={}.{:04}", best_eval(&evals).accuracy,
                 time_per_tree.as_secs(), time_per_tree.subsec_nanos() / 100000);
 
-            send_result(&mut core, &client, server_url, best_eval(&evals))?;
+            {
+                let best = best_eval(&evals);
+                if best.accuracy > best_ever {
+                    best_ever = best.accuracy;
+                    send_result(&mut core, &client, server_url, best)?;
+                }
+            }
 
             if i + 1 < generations {
                 trees = next_generation(&evals, elite, noise, D::feature_max(),
