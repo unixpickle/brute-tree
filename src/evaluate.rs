@@ -29,7 +29,11 @@ pub fn evaluate<S, L>(t: &Tree, samples: &[S], labels: &[L]) -> usize
         } else {
             let mut mapping_ref = &mut mapping;
             let mut counts = mapping_ref.get_mut(&path).unwrap();
-            let new_count = counts[label] + 1;
+            let new_count = if counts.contains_key(label) {
+                counts[label] + 1
+            } else {
+                1
+            };
             counts.insert(*label, new_count);
         }
     }
