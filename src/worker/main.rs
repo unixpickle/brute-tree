@@ -15,7 +15,7 @@ use brute_tree::dataset::mnist::MNIST;
 fn main() {
     // TODO: parse command-line arguments here.
     let dataset = MNIST::load("mnist_dir").expect("failed to load MNIST");
-    let server_url = "http://localhost:1337";
+    let server_url = "http://localhost:1337/tree";
     let trial_count = 10000usize;
     let depth = 5u8;
 
@@ -35,7 +35,7 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, trial_count: usize, dep
     loop {
         let mut best_correct = 0usize;
         let mut best_tree: Option<Tree> = None;
-        for i in 0..trial_count {
+        for _ in 0..trial_count {
             let tree = Tree::random(depth, D::feature_max(), D::threshold_max());
             let num_correct = evaluate(&tree, samples, labels);
             if num_correct >= best_correct {
@@ -57,7 +57,7 @@ fn send_result<T>(core: &mut Core, client: &Client<T>, url: &str, result: TreeEv
     -> Result<(), hyper::Error> where T: hyper::client::Connect
 {
     let uri = url.parse()?;
-    let mut request = Request::new(Method::Get, uri);
+    let mut request = Request::new(Method::Post, uri);
     request.set_body(serde_json::to_string(&result).unwrap());
     core.run(client.request(request))?;
     Ok(())
