@@ -43,10 +43,10 @@ impl Dataset for MNIST {
 
     /// Load the dataset from a directory.
     /// The directory should contain the four files:
-    /// - train-images.idx3-ubyte
-    /// - train-labels.idx1-ubyte
-    /// - t10k-images.idx3-ubyte
-    /// - t10k-labels.idx1-ubyte
+    /// - train-images-idx3-ubyte
+    /// - train-labels-idx1-ubyte
+    /// - t10k-images-idx3-ubyte
+    /// - t10k-labels-idx1-ubyte
     fn load(path: &str) -> Result<Self, io::Error> {
         let child_path = |x| -> Result<String, io::Error>{
             let joined = Path::new(path).join(Path::new(x));
@@ -57,10 +57,10 @@ impl Dataset for MNIST {
             }
         };
         Ok(MNIST{
-            train_data: read_image_file(&child_path("train-images.idx3-ubyte")?)?,
-            test_data: read_image_file(&child_path("t10k-images.idx3-ubyte")?)?,
-            train_labels: read_label_file(&child_path("train-labels.idx1-ubyte")?)?,
-            test_labels: read_label_file(&child_path("t10k-labels.idx1-ubyte")?)?
+            train_data: read_image_file(&child_path("train-images-idx3-ubyte")?)?,
+            test_data: read_image_file(&child_path("t10k-images-idx3-ubyte")?)?,
+            train_labels: read_label_file(&child_path("train-labels-idx1-ubyte")?)?,
+            test_labels: read_label_file(&child_path("t10k-labels-idx1-ubyte")?)?
         })
     }
 

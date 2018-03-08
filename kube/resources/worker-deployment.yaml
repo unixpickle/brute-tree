@@ -1,0 +1,28 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: brute-tree-worker
+  labels:
+    app: brute-tree-worker
+spec:
+  replicas: 3 # change as you like
+  selector:
+    matchLabels:
+      app: brute-tree-worker
+  template:
+    metadata:
+      labels:
+        app: brute-tree-worker
+    spec:
+      containers:
+      - name: brute-tree-worker
+        image: unixpickle/brute-tree
+        resources:
+          limits:
+            cpu: 1
+            memory: 1G
+        command:
+        - "brute-tree-worker"
+        args:
+        - "--server"
+        - "http://brute-tree-service/tree"

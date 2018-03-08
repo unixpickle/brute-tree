@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: brute-tree-server
+  labels:
+    app: brute-tree-server
+spec:
+  containers:
+  - name: brute-tree-server
+    image: unixpickle/brute-tree
+    ports:
+    - containerPort: 80
+    resources:
+      limits:
+        cpu: 1
+        memory: 1G
