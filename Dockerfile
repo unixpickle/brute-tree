@@ -12,6 +12,7 @@ RUN mkdir mnist_dir && \
 
 ADD . /code
 RUN cd /code && \
+    rm -r target && \
     cargo build --release && \
     mv target/release/brute-tree-server /usr/bin && \
     mv target/release/brute-tree-worker /usr/bin && \
