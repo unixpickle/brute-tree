@@ -6,4 +6,4 @@ extern crate rand;
 pub mod tree;
 pub mod evaluate;
 pub mod dataset;
-pub mod evolve;
+pub mod search;

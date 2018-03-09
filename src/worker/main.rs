@@ -12,10 +12,10 @@ use hyper::client::Client;
 use tokio_core::reactor::Core;
 
 use brute_tree::tree::Tree;
-use brute_tree::evaluate::{TreeEvaluation, evaluate};
+use brute_tree::evaluate::TreeEvaluation;
 use brute_tree::dataset::Dataset;
 use brute_tree::dataset::mnist::MNIST;
-use brute_tree::evolve::{best_eval, next_generation};
+use brute_tree::search::{Searcher};
 
 fn main() {
     let matches = App::new("brute-tree-server")
@@ -37,17 +37,11 @@ fn main() {
             .value_name("INT")
             .help("Set the tree depth")
             .takes_value(true))
-        .arg(Arg::with_name("population")
-            .short("p")
-            .long("population")
+        .arg(Arg::with_name("trials")
+            .short("t")
+            .long("trials")
             .value_name("INT")
-            .help("Set the population size")
-            .takes_value(true))
-        .arg(Arg::with_name("elite")
-            .short("e")
-            .long("elite")
-            .value_name("INT")
-            .help("Set the number of selected individuals")
+            .help("Set the number of trials per depth")
             .takes_value(true))
         .arg(Arg::with_name("restart")
             .short("r")
@@ -67,16 +61,20 @@ fn main() {
     let mnist_dir = matches.value_of("mnist").unwrap_or("mnist_dir");
     let dataset = MNIST::load(mnist_dir).expect("failed to load MNIST");
     let depth = matches.value_of("depth").unwrap_or("5").parse::<u8>().unwrap();
-    let population = matches.value_of("population").unwrap_or("100").parse::<usize>().unwrap();
-    let elite = matches.value_of("elite").unwrap_or("10").parse::<usize>().unwrap();
+    let trials = matches.value_of("trials").unwrap_or("64").parse::<usize>().unwrap();
     let restart = matches.value_of("restart").unwrap_or("100").parse::<usize>().unwrap();
     let noise = matches.value_of("noise").unwrap_or("0.02").parse::<f64>().unwrap();
 
-    worker_loop(dataset, server_url, depth, population, elite, restart, noise).unwrap();
+    worker_loop(dataset, server_url, depth, restart, Searcher{
+        trials_per_depth: trials,
+        mutate_prob: noise,
+        feature_max: MNIST::feature_max(),
+        threshold_max: MNIST::threshold_max()
+    }).unwrap();
 }
 
-fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, population: usize,
-    elite: usize, restart: usize, noise: f64) -> Result<(), hyper::Error>
+fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, restart: usize,
+    searcher: Searcher) -> Result<(), hyper::Error>
     where <<D as Dataset>::Sample as std::ops::Index<usize>>::Output: std::cmp::PartialOrd<u8>
 {
     let mut core = Core::new().unwrap();
@@ -87,36 +85,29 @@ fn worker_loop<D: Dataset>(dataset: D, server_url: &str, depth: u8, population: 
 
     loop {
         println!("doing random restart");
-        let mut trees = Vec::new();
-        for _ in 0..population {
-            trees.push(Tree::random(depth, D::feature_max(), D::threshold_max()));
-        }
+        let mut tree = Tree::random(depth, D::feature_max(), D::threshold_max());
         let mut best_ever = 0f64;
         let mut stagnate_iters = 0;
         while stagnate_iters < restart {
             let start_time = Instant::now();
-            let evals: Vec<TreeEvaluation> = (&trees).into_iter().map(|t| {
-                let num_correct = evaluate(t, samples, labels);
-                TreeEvaluation{
-                    tree: t.clone(),
-                    accuracy: (num_correct as f64) / (samples.len() as f64)
-                }
-            }).collect();
+            let (new_tree, correct) = searcher.search(&tree, samples, labels);
+            tree = new_tree;
+            let eval = TreeEvaluation{
+                tree: tree.clone(),
+                accuracy: (correct as f64) / (samples.len() as f64)
+            };
 
-            let time_per_tree = start_time.elapsed() / (trees.len() as u32);
-            println!("best_acc={:.3} tree_time={}.{:04}", best_eval(&evals).accuracy,
-                time_per_tree.as_secs(), time_per_tree.subsec_nanos() / 100000);
+            let total_time = start_time.elapsed();
+            println!("best_acc={:.5} search_time={}.{:03}", eval.accuracy, total_time.as_secs(),
+                total_time.subsec_nanos() / 1000000);
 
-            let best = best_eval(&evals);
-            if best.accuracy > best_ever {
+            if eval.accuracy > best_ever {
                 stagnate_iters = 0;
-                best_ever = best.accuracy;
-                send_result(&mut core, &client, server_url, best)?;
+                best_ever = eval.accuracy;
+                send_result(&mut core, &client, server_url, &eval)?;
             } else {
                 stagnate_iters += 1;
             }
-
-            trees = next_generation(&evals, elite, noise, D::feature_max(), D::threshold_max());
         }
     }
 }

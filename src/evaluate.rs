@@ -14,7 +14,7 @@ pub struct TreeEvaluation {
 /// the given tree.
 ///
 /// The tree must be compatible with Tree::decision_path().
-pub fn evaluate<S>(t: &Tree, samples: &[S], labels: &[usize]) -> usize
+pub fn evaluate<S>(t: &Tree, samples: &[&S], labels: &[usize]) -> usize
     where S: Index<usize>, S::Output: PartialOrd<u8>
 {
     let mut class_counts: Vec<Vec<usize>> = Vec::new();
@@ -27,7 +27,7 @@ pub fn evaluate<S>(t: &Tree, samples: &[S], labels: &[usize]) -> usize
         class_counts.push(counts);
     }
     for (sample, label) in samples.iter().zip(labels.iter()) {
-        let path = t.decision_path(sample);
+        let path = t.decision_path(*sample);
         let mut counts = &mut class_counts[path];
         counts[*label] += 1;
     }
