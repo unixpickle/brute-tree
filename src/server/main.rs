@@ -6,7 +6,7 @@ extern crate serde_json;
 extern crate tokio_core;
 
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::{SocketAddr, SocketAddrV4, Ipv4Addr};
 use std::sync::mpsc::{Sender, channel};
 use std::thread;
@@ -77,6 +77,10 @@ fn serve_on_port(port: u16, out_path: String) {
     let (sender, receiver) = channel::<TreeEvaluation>();
     thread::spawn(move || {
         let mut best_acc = -1f64;
+        if let Some(eval) = load_from_path(&out_path) {
+            println!("using accuracy threshold from existing file");
+            best_acc = eval.accuracy;
+        }
         let mut count = 0usize;
         while let Ok(status) = receiver.recv() {
             count += 1;
@@ -94,6 +98,24 @@ fn serve_on_port(port: u16, out_path: String) {
     Http::new().bind(&addr, move || {
         Ok(StatusService{sender: sender.clone()})
     }).unwrap().run().unwrap();
+}
+
+fn load_from_path(path: &str) -> Option<TreeEvaluation> {
+    if let Ok(mut file) = File::open(path.clone()) {
+        let mut body = String::new();
+        if let Ok(_) = file.read_to_string(&mut body) {
+            let parsed: Result<TreeEvaluation, serde_json::Error> = serde_json::from_str(&body);
+            if let Ok(eval) = parsed {
+                Some(eval)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    }
 }
 
 fn not_found_response() -> Response {
