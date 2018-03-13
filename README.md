@@ -14,4 +14,4 @@ This table includes the training accuracy for different versions of this algorit
 |--------------------|---------|---------|
 | Random Search      | 0.46    | --      |
 | Basic Evolution    | 0.7732  | 0.8115  |
-| Sub-tree Evolution | --      | --      |
+| Sub-tree Evolution | 0.7835  | 0.8203  |
